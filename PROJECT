@@ -1,0 +1,6 @@
+domain: bytegopher.com
+layout:
+- go.kubebuilder.io/v3
+projectName: cnat-kubebuilder
+repo: www.github.com/airren/cnat-kubebuilder
+version: "3"
