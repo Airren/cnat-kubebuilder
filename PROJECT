@@ -3,4 +3,14 @@ layout:
 - go.kubebuilder.io/v3
 projectName: cnat-kubebuilder
 repo: www.github.com/airren/cnat-kubebuilder
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: bytegopher.com
+  group: cnat
+  kind: At
+  path: www.github.com/airren/cnat-kubebuilder/api/v1alpha1
+  version: v1alpha1
 version: "3"

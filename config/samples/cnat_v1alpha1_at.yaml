@@ -1,0 +1,6 @@
+apiVersion: cnat.bytegopher.com/v1alpha1
+kind: At
+metadata:
+  name: at-sample
+spec:
+  # TODO(user): Add fields here
