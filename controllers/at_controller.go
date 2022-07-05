@@ -19,21 +19,26 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
+	"time"
 
-	"golang.org/x/tools/go/analysis/passes/nilfunc"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/pkg/apis/clientauthentication/install"
+	// "k8s.io/client-go/pkg/apis/clientauthentication/install"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
+	// "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	cnatv1alpha1 "www.github.com/airren/cnat-kubebuilder/api/v1alpha1"
 )
+
+var log = logf.Log.WithName("bytegopher controller")
 
 // AtReconciler reconciles a At object
 type AtReconciler struct {
@@ -55,11 +60,8 @@ type AtReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.1/pkg/reconcile
 func (r *AtReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
 
-	// TODO(user): your logic here
-
-	reqLogger := log.Log.WithValues("namespace", req.Namespace, "at", req.Name)
+	reqLogger := log.WithValues("namespace", req.Namespace, "at", req.Name)
 	reqLogger.Info("=== Reconciling At")
 
 	// Fetch the At instance
@@ -68,10 +70,12 @@ func (r *AtReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Re
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile
-			// request-return and don't requeue
+			// request
+			// return and don't requeue
 			return reconcile.Result{}, nil
 		}
-		// Error reading the object-requeue the request:
+		// Error reading the object
+		// requeue the request:
 		return reconcile.Result{}, err
 	}
 
@@ -85,22 +89,22 @@ func (r *AtReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Re
 	switch instance.Status.Phase {
 	case cnatv1alpha1.PhasePending:
 		reqLogger.Info("Phase: PENDING")
-		// As long as we haven't executed the command yet, we need to check if 
+		// As long as we haven't executed the command yet, we need to check if
 		// it's already time to act
-		reqLogger.Info("Checking schedule","Target", instance.Spec.Schedule)
-		// Check if it's already time to execute the command with a tolerance of 
+		reqLogger.Info("Checking schedule", "Target", instance.Spec.Schedule)
+		// Check if it's already time to execute the command with a tolerance of
 		// 2 second
 		d, err := timeUtilSchedule(instance.Spec.Schedule)
-		if err != nil{
+		if err != nil {
 			reqLogger.Error(err, "Schedule parsing failure")
 			// Error reading the schedule. Wait until it is fixed.
-			return reconcile.Result{},err
+			return reconcile.Result{}, err
 		}
-		reqLogger.Info("Schedule parsing done","Result","diff",fmt.Sprintf("%v",d))
+		reqLogger.Info("Schedule parsing done", "Result", "diff", fmt.Sprintf("%v", d))
 
-		if d >0{
+		if d > 0 {
 			// Not yet time to execute the command, wait until the schedule time
-			return reconcile.Result{RequeueAfter: d},nil
+			return reconcile.Result{RequeueAfter: d}, nil
 		}
 
 		reqLogger.Info("It's time!", "Ready to execute", instance.Spec.Command)
@@ -110,39 +114,53 @@ func (r *AtReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Re
 		reqLogger.Info("Phase: RUNNING")
 		pod := newPodForCR(instance)
 		// Set At instance as the owner and controller
-		err := controllerutil.SetControllerReference(instance, pod, r.Scheme) 
-		if err != nil{
+		err := controllerutil.SetControllerReference(instance, pod, r.Scheme)
+		if err != nil {
 			// requeue with error
-			return reconcile.Result{},err
+			return reconcile.Result{}, err
 		}
 		found := &corev1.Pod{}
 		nsName := types.NamespacedName{
-			Name: pod.Name,
+			Name:      pod.Name,
 			Namespace: pod.Namespace,
 		}
-		err := r.Get(context.TODO(), nsName, found)
+		err = r.Get(context.TODO(), nsName, found)
 		// Try to see if the pod already exist and if not
 		// (which we expect) then create a noe-shot pod as per spec
-		if err!= nil && errors.IsNotFound(err){
+		if err != nil && errors.IsNotFound(err) {
 			err = r.Create(context.TODO(), pod)
-			if err != nil{
+			if err != nil {
 				// requeue with error
-				return reconcile.Result{},err
+				return reconcile.Result{}, err
 			}
-		} else if err != nil{
+		} else if err != nil {
 			// requeue with error
-			return reconcile.Result{},err
-		} else if found.Status.Phase == corev1.PodFaild || found.Status.Phase == corev1.PodSucceed{
-			reqLogger.Info("Container terminated","reason", found.Status.Reason,
-		"message", found.Status.Message)
-		} else{
-			// 
+			return reconcile.Result{}, err
+		} else if found.Status.Phase == corev1.PodFailed || found.Status.Phase == corev1.PodSucceeded {
+			reqLogger.Info("Container terminated", "reason", found.Status.Reason,
+				"message", found.Status.Message)
+
+			instance.Status.Phase = cnatv1alpha1.PhaseDone
+		} else {
+			// Don't requeue because it will happen automatically when the pod
+			// status changes.
+			return reconcile.Result{}, nil
 		}
+	case cnatv1alpha1.PhaseDone:
+		reqLogger.Info("Phase: Done")
+		return reconcile.Result{}, nil
+	default:
+		reqLogger.Info("NOP")
+		return reconcile.Result{}, nil
+	}
 
+	// Update the At instance, setting the status to the respective phase
+	err = r.Status().Update(context.TODO(), instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 
-
-		 
-
+	// Don't requeue. We should be reconcile because either the pod or the CR changes
 	return ctrl.Result{}, nil
 }
 
@@ -151,4 +169,40 @@ func (r *AtReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cnatv1alpha1.At{}).
 		Complete(r)
+}
+
+// nowPodForCR returns a busybox pod with the same name/namespace as the cr
+func newPodForCR(cr *cnatv1alpha1.At) *corev1.Pod {
+	labels := map[string]string{
+		"app": cr.Name,
+	}
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      cr.Name + "-pod",
+			Namespace: cr.Namespace,
+			Labels:    labels,
+		},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{
+				{
+					Name:    "busybox",
+					Image:   "busybox",
+					Command: strings.Split(cr.Spec.Command, " "),
+				},
+			},
+			RestartPolicy: corev1.RestartPolicyOnFailure,
+		},
+	}
+}
+
+// timeUtilSchedule parses the schedule string adn returns the time until the
+// schedule. When it is overdue, the duration is negative.
+func timeUtilSchedule(schedule string) (time.Duration, error) {
+	now := time.Now().UTC()
+	s, err := time.Parse(time.RFC3339, schedule)
+	if err != nil {
+		return time.Duration(0), err
+	}
+
+	return s.Sub(now), nil
 }
