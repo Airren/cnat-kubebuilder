@@ -104,10 +104,12 @@ EOF
 
 #---------------------- Install Container Runtime ------------------------------
 function docker_install() {
-  # sudo apt remover docker docker-engine docker.io containerd runc
-  # sudo apt install -y docker.io
+   sudo apt remove docker docker-engine docker.io containerd runc
+ sudo apt-get remove -y docker-ce=5:${docker_version}~3-0~ubuntu-jammy \
+  docker-ce-cli=5:${docker_version}~3-0~ubuntu-jammy containerd.io
+   sudo apt install -y docker.io
   sudo rm -f /usr/share/keyrings/docker-archive-keyring.gpg
-  curl -x ${intel_http_proxy} \
+  curl  \
     -fsSL https://download.docker.com/linux/ubuntu/gpg |
     sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
@@ -119,8 +121,9 @@ docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
 
   sudo apt update
 
- sudo apt-get install -y docker-ce=5:${docker_version}~3-0~ubuntu-jammy \
-  docker-ce-cli=5:${docker_version}~3-0~ubuntu-jammy containerd.io
+ #sudo apt-get install -y docker-ce=5:${docker_version}~3-0~ubuntu-jammy \
+ # docker-ce-cli=5:${docker_version}~3-0~ubuntu-jammy containerd.io
+ # sudo apt install docker.io
 
 
  # sudo apt-get install -y docker-ce=5:${docker_version}~3-0~ubuntu-focal \
@@ -141,6 +144,7 @@ docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
 EOF
   sudo systemctl enable docker
   sudo systemctl daemon-reload
+  sleep 15s
   sudo systemctl restart docker
 
   if [ $proxy_flag == "on" ]; then
@@ -210,7 +214,7 @@ function k8s_init() {
   echo "---------------K8s API Ip is $ipaddr------------------------"
 
   sudo kubeadm init --kubernetes-version=${k8s_version} \
-    --pod-network-cidr=10.233.64.0/18 --apiserver-advertise-address=${ipaddr}
+    --pod-network-cidr=10.233.64.0/18 --apiserver-advertise-address=${ipaddr} --cri-socket=/var/run/cri-dockerd.sock
 
   mkdir -p $HOME/.kube
   sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
@@ -242,6 +246,6 @@ export DEBIAN_FRONTEND=noninteractive
 
 iptables_conf
 docker_install
-load_local_images
+# load_local_images
 kube_install
 k8s_init
