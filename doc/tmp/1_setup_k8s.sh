@@ -4,7 +4,7 @@
 
 sudo swapoff -a
 intel_http_proxy='http://proxy-prc.intel.com:913'
-proxy_flag='on'
+proxy_flag='off'
 k8s_version='1.24.2'
 docker_version='20.10.12'
 docker_user=
@@ -127,7 +127,7 @@ function docker_install() {
   # sudo apt remover docker docker-engine docker.io containerd runc
   # sudo apt install -y docker.io
   sudo rm -f /usr/share/keyrings/docker-archive-keyring.gpg
-  curl -x ${intel_http_proxy} \
+  curl  \
     -fsSL https://download.docker.com/linux/ubuntu/gpg |
     sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 

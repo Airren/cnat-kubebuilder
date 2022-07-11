@@ -128,32 +128,32 @@ docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
 
  # sudo apt-get install -y docker-ce=5:${docker_version}~3-0~ubuntu-focal \
   #  docker-ce-cli=5:${docker_version}~3-0~ubuntu-focal containerd.io
-  sudo usermod -aG docker $USER
-
-  # runtime config
-  sudo mkdir -p /etc/docker
-  cat <<EOF | sudo tee /etc/docker/daemon.json
-{
-  "exec-opts": ["native.cgroupdriver=systemd"],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "100m"
-  },
-  "storage-driver": "overlay2"
-}
-EOF
-  sudo systemctl enable docker
-  sudo systemctl daemon-reload
-  sleep 15s
-  sudo systemctl restart docker
-
-  if [ $proxy_flag == "on" ]; then
-    set_proxy_for_docker
-  fi
-
-  if [ ! -z $docker_user ]; then
-    sudo docker login ${docker_user} ${docker_pass}
-  fi
+#   sudo usermod -aG docker $USER
+# 
+#   # runtime config
+#   sudo mkdir -p /etc/docker
+#   cat <<EOF | sudo tee /etc/docker/daemon.json
+# {
+#   "exec-opts": ["native.cgroupdriver=systemd"],
+#   "log-driver": "json-file",
+#   "log-opts": {
+#     "max-size": "100m"
+#   },
+#   "storage-driver": "overlay2"
+# }
+# EOF
+#   sudo systemctl enable docker
+#   sudo systemctl daemon-reload
+#   sleep 15s
+#   sudo systemctl restart docker
+# 
+#   if [ $proxy_flag == "on" ]; then
+#     set_proxy_for_docker
+#   fi
+# 
+#   if [ ! -z $docker_user ]; then
+#     sudo docker login ${docker_user} ${docker_pass}
+#   fi
 }
 
 #------------------------- Load Local Images -----------------------------------
@@ -201,7 +201,7 @@ function kube_install() {
 function k8s_init() {
   ifconfig | awk '/inet/{print $2}' | cut -f2 -d ":"
   ipaddr=$(ifconfig | awk '/inet/{print $2}' | cut -f2 -d ":" |
-    awk 'NR==2 {print $1}')
+    awk 'NR==1 {print $1}')
 
   echo "auto detected IP for api server:" $ipaddr
 
