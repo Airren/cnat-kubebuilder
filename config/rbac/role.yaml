@@ -31,3 +31,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - cnat.bytegopher.com
+  resources:
+  - cronjobats
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cnat.bytegopher.com
+  resources:
+  - cronjobats/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - cnat.bytegopher.com
+  resources:
+  - cronjobats/status
+  verbs:
+  - get
+  - patch
+  - update
