@@ -27,9 +27,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+
 	// "k8s.io/client-go/pkg/apis/clientauthentication/install"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	// "sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,7 +40,7 @@ import (
 	cnatv1alpha1 "www.github.com/airren/cnat-kubebuilder/api/v1alpha1"
 )
 
-var log = logf.Log.WithName("bytegopher controller")
+var log = logf.Log.WithName("bytegopher-at-controller")
 
 // AtReconciler reconciles a At object
 type AtReconciler struct {
@@ -62,7 +64,7 @@ type AtReconciler struct {
 func (r *AtReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	reqLogger := log.WithValues("namespace", req.Namespace, "at", req.Name)
-	reqLogger.Info("=== Reconciling At")
+	reqLogger.Info("=== Reconciling At", "CurrentTime", time.Now().String())
 
 	// Fetch the At instance
 	instance := &cnatv1alpha1.At{}
@@ -70,12 +72,10 @@ func (r *AtReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Re
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile
-			// request
-			// return and don't requeue
+			// request - return and don't requeue
 			return reconcile.Result{}, nil
 		}
-		// Error reading the object
-		// requeue the request:
+		// Error reading the object - requeue the request:
 		return reconcile.Result{}, err
 	}
 
@@ -95,12 +95,13 @@ func (r *AtReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Re
 		// Check if it's already time to execute the command with a tolerance of
 		// 2 second
 		d, err := timeUtilSchedule(instance.Spec.Schedule)
+
 		if err != nil {
 			reqLogger.Error(err, "Schedule parsing failure")
 			// Error reading the schedule. Wait until it is fixed.
 			return reconcile.Result{}, err
 		}
-		reqLogger.Info("Schedule parsing done", "Result", "diff", fmt.Sprintf("%v", d))
+		reqLogger.Info("Schedule parsing done", "Result", fmt.Sprintf("diff=%v", d))
 
 		if d > 0 {
 			// Not yet time to execute the command, wait until the schedule time
@@ -126,13 +127,17 @@ func (r *AtReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Re
 		}
 		err = r.Get(context.TODO(), nsName, found)
 		// Try to see if the pod already exist and if not
-		// (which we expect) then create a noe-shot pod as per spec
+		// (which we expect) then create a one-shot pod as per spec
 		if err != nil && errors.IsNotFound(err) {
 			err = r.Create(context.TODO(), pod)
 			if err != nil {
 				// requeue with error
 				return reconcile.Result{}, err
 			}
+			reqLogger.Info("Pod launched", "name", pod.Name)
+			// TODO pod created, when to requeue
+			// return reconcile.Result{}, nil
+			return reconcile.Result{}, fmt.Errorf("pod created")
 		} else if err != nil {
 			// requeue with error
 			return reconcile.Result{}, err
@@ -141,10 +146,13 @@ func (r *AtReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Re
 				"message", found.Status.Message)
 
 			instance.Status.Phase = cnatv1alpha1.PhaseDone
+			// TODO job done
 		} else {
 			// Don't requeue because it will happen automatically when the pod
 			// status changes.
-			return reconcile.Result{}, nil
+			// TODO
+			return reconcile.Result{}, fmt.Errorf("wait for finish")
+			// return reconcile.Result{}, nil
 		}
 	case cnatv1alpha1.PhaseDone:
 		reqLogger.Info("Phase: Done")

@@ -3,6 +3,5 @@ kind: At
 metadata:
   name: at-sample
 spec:
-  # TODO(user): Add fields here
-  schedule: "2022-07-12T15:04:05Z"
-  command: "echo hello"
+  schedule: 2022-07-12T14:14:00+08:00
+  command: echo "hell world"

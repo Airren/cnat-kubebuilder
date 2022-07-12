@@ -48,7 +48,6 @@ type AtStatus struct {
 	Phase string `json:"phase,omitempty"`
 }
 
-
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
