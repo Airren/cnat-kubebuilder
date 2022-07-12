@@ -1,0 +1,24 @@
+# permissions for end users to edit cronjobats.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cronjobat-editor-role
+rules:
+- apiGroups:
+  - cnat.bytegopher.com
+  resources:
+  - cronjobats
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - cnat.bytegopher.com
+  resources:
+  - cronjobats/status
+  verbs:
+  - get

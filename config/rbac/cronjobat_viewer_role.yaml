@@ -1,0 +1,20 @@
+# permissions for end users to view cronjobats.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cronjobat-viewer-role
+rules:
+- apiGroups:
+  - cnat.bytegopher.com
+  resources:
+  - cronjobats
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cnat.bytegopher.com
+  resources:
+  - cronjobats/status
+  verbs:
+  - get
