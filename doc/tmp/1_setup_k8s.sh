@@ -126,6 +126,7 @@ EOF
 function docker_install() {
   # sudo apt remover docker docker-engine docker.io containerd runc
   # sudo apt install -y docker.io
+  sudo apt remove -y containerd.io
   sudo rm -f /usr/share/keyrings/docker-archive-keyring.gpg
   curl  \
     -fsSL https://download.docker.com/linux/ubuntu/gpg |
@@ -187,7 +188,7 @@ function containerd_install(){
   sudo apt install -y  containerd.io
   echo ""|sudo  tee  /etc/containerd/config.toml
        # set_proxy_for_containerd
-  iptables_conf
+  sleep 30s
   sudo systemctl restart  containerd.service
   sleep 30s
   sudo chmod 666 /run/containerd/containerd.sock
@@ -289,7 +290,7 @@ export DEBIAN_FRONTEND=noninteractive
 iptables_conf
 docker_install
 containerd_install
-load_local_images
+#load_local_images
 kube_install
 k8s_init
 
